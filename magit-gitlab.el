@@ -323,10 +323,10 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
    "["
    (propertize (magit-gitlab--show-mr mr) 'face 'magit-branch-local)
    "] "
-   (apply 'format string objects)))
+   (apply #'format string objects)))
 
 (defun magit-gitlab--message (mr string &rest objects)
-  (message (apply 'magit-gitlab--format mr string objects)))
+  (message (apply #'magit-gitlab--format mr string objects)))
 
 (cl-defun magit-gitlab--mr-set-prop-async
     (mr
@@ -483,7 +483,7 @@ Calls CALLBACK if successful, ERRORBACK if not."
   "Strip the remote prefix from BRANCH-NAME if present."
   (let ((components (split-string branch-name "/")))
     (if (> (length components) 1)
-        (mapconcat 'identity (cdr components) "/") ; Rejoin the rest if more than one slash exists
+        (mapconcat #'identity (cdr components) "/") ; Rejoin the rest if more than one slash exists
       branch-name))) ; Return the original if no slash found
 
 ;; By default, get current branch or branch-at-point. If prefix is
