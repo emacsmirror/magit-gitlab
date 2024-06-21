@@ -8,7 +8,7 @@
 ;; Created: 15 Jun 2024
 
 ;; Keyword: git tools vc
-;; URL: https://gitlab.com/arvidnl/magit-gitlab.el
+;; URL: https://gitlab.com/arvidnl/magit-gitlab
 
 ;; This file is not part of GNU Emacs.
 
