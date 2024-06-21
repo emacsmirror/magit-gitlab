@@ -51,7 +51,7 @@
   :prefix "magit-glab-"
   :group 'convenience)
 
-(defcustom mg-favorite-users nil
+(defcustom magit-gitlab-favorite-users nil
   "A list of GitLab favorite users for easy access.
 
 Should be a list of values, where each value is on the list
@@ -74,14 +74,14 @@ Example:
 
 ;;; Caches
 
-(defvar mg--known-milestones (make-hash-table :test 'equal)
+(defvar magit-gitlab--known-milestones (make-hash-table :test 'equal)
   "Hash table for storing seen milestones.
 
 Used to provide candidates in completing-reads.")
 
 ;;; Encoding
 
-(defun mg-url-encode-project-id (project-id)
+(defun magit-gitlab-url-encode-project-id (project-id)
   "Encode a GitLab PROJECT-ID as a string.
 
 A GitLab PROJECT-ID can either be a string on the form
@@ -93,7 +93,7 @@ integer as a string."
       (number-to-string project-id)
     (url-hexify-string project-id)))
 
-(defun mg--url-mr (project-id mr-iid)
+(defun magit-gitlab--url-mr (project-id mr-iid)
   "Path to GitLab API's `Get single MR' endpoint for PROJECT-ID and MR-IID.
 
 Return path to the GitLab API's `Get single MR' endpoint for a
@@ -104,11 +104,11 @@ For more information, see URL
 `https://docs.gitlab.com/ee/api/merge_requests.html#get-single-mr'."
   (concat
    "/projects/"
-   (mg-url-encode-project-id project-id)
+   (magit-gitlab-url-encode-project-id project-id)
    "/merge_requests/"
    (number-to-string mr-iid)))
 
-(defun mg--url-project (project-id)
+(defun magit-gitlab--url-project (project-id)
   "Path to GitLab API's `Get single project' endpoint for PROJECT-ID.
 
 Return path to the GitLab API's `Get single project' endpoint for a
@@ -117,22 +117,22 @@ NAMESPACE/PROJECT or integral).
 
 For more information, see URL
 `https://docs.gitlab.com/ee/api/projects.html#get-single-project'."
-  (concat "/projects/" (mg-url-encode-project-id project-id)))
+  (concat "/projects/" (magit-gitlab-url-encode-project-id project-id)))
 
-(defvar mg--GET-cache-file "/tmp/.magit-glab-cache.el"
+(defvar magit-gitlab--GET-cache-file "/tmp/.magit-glab-cache.el"
   "Path to magit-gitlab's cache.")
 
-(defvar mg--GET-cache (make-hash-table :test 'equal)
+(defvar magit-gitlab--GET-cache (make-hash-table :test 'equal)
   "Hash table for storing memoized GET results.")
 
-(cl-defun mg--get (resource params &key no-cache callback errorback)
+(cl-defun magit-gitlab--get (resource params &key no-cache callback errorback)
   "Make a request for RESOURCE with caching and return the response body.
 
 This function is as `ghub-request' with METHOD set to GET, and
 the arguments RESOURCE, PARAMS, CALLBACK and ERRORBACK has the
 same meaning.  However, if the request is successful, the
-response is cached in `mg--GET-cache'.  Subsequent calls
-to `mg--get', with exactly matching REQUEST and PARAMS,
+response is cached in `magit-gitlab--GET-cache'.  Subsequent calls
+to `magit-gitlab--get', with exactly matching REQUEST and PARAMS,
 return the same value unless NO-CACHE is non-nil.  When a cached
 value is returned, all argument except the first passed to
 CALLBACK are nil."
@@ -146,7 +146,7 @@ CALLBACK are nil."
        :callback callback
        :errorback errorback)
     (if-let (cached-value
-             (gethash (list resource params) mg--GET-cache))
+             (gethash (list resource params) magit-gitlab--GET-cache))
       ;; Value found in cache
       (if callback
           (funcall callback cached-value nil nil nil)
@@ -160,7 +160,7 @@ CALLBACK are nil."
            :forge 'gitlab
            :callback
            (lambda (resp header status req)
-             (puthash (list resource params) resp mg--GET-cache)
+             (puthash (list resource params) resp magit-gitlab--GET-cache)
              (funcall callback resp header status req))
            :errorback errorback)
         ;; If synchronous
@@ -171,15 +171,15 @@ CALLBACK are nil."
                   params
                   :auth 'magit-gitlab
                   :forge 'gitlab))
-          (puthash (list resource params) value mg--GET-cache))))))
+          (puthash (list resource params) value magit-gitlab--GET-cache))))))
 
-(cl-defun mg--get1 (url params &key no-cache callback errorback)
-  "Like `mg--get', but apply car to the result.
+(cl-defun magit-gitlab--get1 (url params &key no-cache callback errorback)
+  "Like `magit-gitlab--get', but apply car to the result.
 
 See `magit-gitlab--get' for details on URL, PARAMS, NO-CACHE, CALLBACK
 and ERRORBACK."
   (let ((resp
-         (mg--get
+         (magit-gitlab--get
           url params
           :callback
           (when callback
@@ -189,44 +189,44 @@ and ERRORBACK."
     (when (not (or callback errorback))
       (car resp))))
 
-(cl-defun mg--get-user (username &key no-cache callback errorback)
+(cl-defun magit-gitlab--get-user (username &key no-cache callback errorback)
   "Get the user corresponding to USERNAME.
 
 See `magit-gitlab--get` for details on NO-CACHE, CALLBACK and ERRORBACK."
-  (mg--get1
+  (magit-gitlab--get1
    "/users"
    `((username . ,username))
    :no-cache no-cache
    :callback callback
    :errorback errorback))
 
-(cl-defun mg--get-milestone-of-iid
+(cl-defun magit-gitlab--get-milestone-of-iid
     (project-id milestone-iid &key no-cache callback errorback)
   "Get the milestone corresponding to MILESTONE-IID in PROJECT-ID.
 
 See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
-  (mg--get1
+  (magit-gitlab--get1
    (format "/projects/%s/milestones"
-           (mg-url-encode-project-id project-id))
+           (magit-gitlab-url-encode-project-id project-id))
    `((iids . ,milestone-iid))
    :no-cache no-cache
    :callback callback
    :errorback errorback))
 
-(cl-defun mg--get-mr
+(cl-defun magit-gitlab--get-mr
     (project-id mr-iid &key no-cache callback errorback)
   "Get the MR corresponding to MR-IID in PROJECT-ID.
 
 See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
-  (mg--get
-   (mg--url-mr project-id mr-iid)
+  (magit-gitlab--get
+   (magit-gitlab--url-mr project-id mr-iid)
    nil
    :callback callback
    :errorback errorback
    :no-cache no-cache))
 
 
-(cl-defun mg--get-mr-of-source-branch
+(cl-defun magit-gitlab--get-mr-of-source-branch
     (project-id source-branch &key no-cache callback errorback)
   "Get the MR corresponding to SOURCE-BRANCH in PROJECT-ID.
 
@@ -238,12 +238,12 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
              (puthash
               (alist-get 'id milestone)
               milestone
-              mg--known-milestones)))))
+              magit-gitlab--known-milestones)))))
     (let ((resp
-           (mg--get1
+           (magit-gitlab--get1
             (concat
              "/projects/"
-             (mg-url-encode-project-id project-id)
+             (magit-gitlab-url-encode-project-id project-id)
              "/merge_requests")
             `((source_branch . ,source-branch))
             :callback
@@ -257,19 +257,19 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
         (funcall observe-milestone resp)
         resp))))
 
-(cl-defun mg--get-project
+(cl-defun magit-gitlab--get-project
     (project-id &key no-cache callback errorback)
   "Get project corresponding  PROJECT-ID.
 
 See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
-  (mg--get
-   (mg--url-project project-id)
+  (magit-gitlab--get
+   (magit-gitlab--url-project project-id)
    nil
    :callback callback
    :errorback errorback
    :no-cache no-cache))
 
-(defconst mg--mr-properties
+(defconst magit-gitlab--mr-properties
   '(add_labels
     allow_collaboration
     allow_maintainer_to_push
@@ -287,7 +287,7 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
     target_branch
     title))
 
-(defun mg--show-mr-property (property)
+(defun magit-gitlab--show-mr-property (property)
   (pcase property
     ('add_labels "add labels") ;; todo
     ('allow_collaboration "allow collaboration")
@@ -309,26 +309,26 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
      (error
       "Property %s is not one of: %s"
       property
-      (mapconcat #'symbol-name mg--mr-properties ", ")))))
+      (mapconcat #'symbol-name magit-gitlab--mr-properties ", ")))))
 
-(defun mg--show-mr (mr)
+(defun magit-gitlab--show-mr (mr)
   (format "%s!%d"
           (alist-get
            'path_with_namespace
-           (mg--get-project (alist-get 'project_id mr)))
+           (magit-gitlab--get-project (alist-get 'project_id mr)))
           (alist-get 'iid mr)))
 
-(defun mg--format (mr string &rest objects)
+(defun magit-gitlab--format (mr string &rest objects)
   (concat
    "["
-   (propertize (mg--show-mr mr) 'face 'magit-branch-local)
+   (propertize (magit-gitlab--show-mr mr) 'face 'magit-branch-local)
    "] "
    (apply 'format string objects)))
 
-(defun mg--message (mr string &rest objects)
-  (message (apply 'mg--format mr string objects)))
+(defun magit-gitlab--message (mr string &rest objects)
+  (message (apply 'magit-gitlab--format mr string objects)))
 
-(cl-defun mg--mr-set-prop-async
+(cl-defun magit-gitlab--mr-set-prop-async
     (mr
      property
      value
@@ -339,19 +339,19 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
      message-success
      message-error
      show-value)
-  (unless (memq property mg--mr-properties)
+  (unless (memq property magit-gitlab--mr-properties)
     (error
      "Unsupported property: %s. Accepted properties are: %s"
      property
-     (mapconcat #'symbol-name mg--mr-properties ", ")))
+     (mapconcat #'symbol-name magit-gitlab--mr-properties ", ")))
   (let* ((value-pp
           (if show-value
               (funcall show-value value)
             value))
          (message-prog
           (or message-progress
-              (mg--format mr "Setting %s%s"
-                          (mg--show-mr-property property)
+              (magit-gitlab--format mr "Setting %s%s"
+                          (magit-gitlab--show-mr-property property)
                           (if value-pp
                               (format " to: '%s'" value-pp)
                             ""))))
@@ -359,12 +359,12 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
           (or message-success (format "%s... Done!" message-prog)))
          (message-error
           (or message-error
-              (mg--format mr "An error occurred when setting %s:"
-                          (mg--show-mr-property property)))))
+              (magit-gitlab--format mr "An error occurred when setting %s:"
+                          (magit-gitlab--show-mr-property property)))))
     (message "%s..." message-prog)
     (ghub-request
      "PUT"
-     (mg--url-mr (alist-get 'project_id mr) (alist-get 'iid mr))
+     (magit-gitlab--url-mr (alist-get 'project_id mr) (alist-get 'iid mr))
      `((,property . ,value))
      :auth 'magit-gitlab
      :forge 'gitlab
@@ -377,7 +377,7 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
          (lambda (err _header _status _req)
            (message "%s: %s" message-error err))))))
 
-(defun mg--project-of-remote (remote-url)
+(defun magit-gitlab--project-of-remote (remote-url)
   "Extract NAMESPACE/PROJECT from GitLab REMOTE-URL.
 
 URL is a git repository URL in either of these forms:
@@ -395,7 +395,7 @@ Returns the 'NAMESPACE/PROJECT' part of the URL."
      "Remote URL '%s' does not match expected format for a GitLab remote"
      remote-url)))
 
-(defun mg--infer-project-id (branch)
+(defun magit-gitlab--infer-project-id (branch)
   (if-let (remote
            (or (let ((branch_remote
                       (magit-get (format "branch.%s.remote" branch))))
@@ -409,7 +409,7 @@ Returns the 'NAMESPACE/PROJECT' part of the URL."
                (magit-get-current-remote)
                (magit-get "remote.pushDefault")))
     (if-let ((remote-url (magit-get (format "remote.%s.url" remote))))
-      (mg--project-of-remote remote-url)
+      (magit-gitlab--project-of-remote remote-url)
       (error
        "The remote '%s' has no url (remote.%s.url is not set)"
        remote
@@ -417,42 +417,42 @@ Returns the 'NAMESPACE/PROJECT' part of the URL."
     (error
      "Cannot infer GitLab project: no remote set for this branch, nor is remote.pushDefault set")))
 
-(defvar-local mg--mr nil
+(defvar-local magit-gitlab--mr nil
   "Merge request under edit in MR description buffers.")
 
 ;; TODO: if saving fails, user should not lose their description.
-(cl-defun mg-mr-save-description-buffer (&key callback errorback)
+(cl-defun magit-gitlab-mr-save-description-buffer (&key callback errorback)
   "Save the current description buffer, updating the MR.
 
 Calls CALLBACK if successful, ERRORBACK if not."
   (interactive)
-  (mg--mr-set-prop-async
-   mg--mr 'description (buffer-string)
+  (magit-gitlab--mr-set-prop-async
+   magit-gitlab--mr 'description (buffer-string)
    :show-value (lambda (_) nil)
    :callback
    (lambda (resp header status req)
      (set-buffer-modified-p nil)
-     (mg--message mg--mr "Setting description... Done!")
+     (magit-gitlab--message magit-gitlab--mr "Setting description... Done!")
      (when callback
        (funcall callback resp header status req)))
    :errorback errorback))
 
-(defun mg-mr-save-and-close-description-buffer ()
+(defun magit-gitlab-mr-save-and-close-description-buffer ()
   "Save and close the current description buffer, updating the MR."
   (interactive)
-  (mg-mr-save-description-buffer
+  (magit-gitlab-mr-save-description-buffer
    :callback (lambda (_ _ _ _) (magit-kill-this-buffer))))
 
-(defun mg-mr-cancel-description-buffer ()
+(defun magit-gitlab-mr-cancel-description-buffer ()
   "Cancel the current description update buffer, does not update the MR."
   (interactive)
-  (mg--message mg--mr "Description edit cancelled")
+  (magit-gitlab--message magit-gitlab--mr "Description edit cancelled")
   (magit-kill-this-buffer))
 
-(defun mg--mr-create-description-buffer (mr)
+(defun magit-gitlab--mr-create-description-buffer (mr)
   "Create description buffer for MR."
   (let* ((base-name
-          (format "Edit description of %s" (mg--show-mr mr)))
+          (format "Edit description of %s" (magit-gitlab--show-mr mr)))
          (buffer-name base-name)
          (index 1))
     (while (get-buffer buffer-name)
@@ -470,16 +470,16 @@ Calls CALLBACK if successful, ERRORBACK if not."
       (markdown-mode))
     ;; Set up local keybindings for this buffer
     (use-local-map (copy-keymap (current-local-map)))
-    (setq mg--mr mr)
+    (setq magit-gitlab--mr mr)
     (keymap-local-set
-     "C-c C-c" #'mg-mr-save-and-close-description-buffer)
-    (keymap-local-set "C-c C-s" #'mg-mr-save-description-buffer)
-    (keymap-local-set "C-x C-s" #'mg-mr-save-description-buffer)
-    (keymap-local-set "C-c C-k" #'mg-mr-cancel-description-buffer)
+     "C-c C-c" #'magit-gitlab-mr-save-and-close-description-buffer)
+    (keymap-local-set "C-c C-s" #'magit-gitlab-mr-save-description-buffer)
+    (keymap-local-set "C-x C-s" #'magit-gitlab-mr-save-description-buffer)
+    (keymap-local-set "C-c C-k" #'magit-gitlab-mr-cancel-description-buffer)
     ;; Return the newly created buffer
     buffer-name))
 
-(defun mg--strip-remote-prefix (branch-name)
+(defun magit-gitlab--strip-remote-prefix (branch-name)
   "Strip the remote prefix from BRANCH-NAME if present."
   (let ((components (split-string branch-name "/")))
     (if (> (length components) 1)
@@ -488,14 +488,14 @@ Calls CALLBACK if successful, ERRORBACK if not."
 
 ;; By default, get current branch or branch-at-point. If prefix is
 ;; given or if both those values are nil, then read a value instead.
-(defun mg--read-branch ()
+(defun magit-gitlab--read-branch ()
   (let ((branch
          (or (magit-branch-at-point) (magit-get-current-branch))))
     (if (or current-prefix-arg (not branch))
         (read-string "Branch name: ")
-      (mg--strip-remote-prefix branch))))
+      (magit-gitlab--strip-remote-prefix branch))))
 
-(cl-defun mg--read-mr (&key cache)
+(cl-defun magit-gitlab--read-mr (&key cache)
   "Read an MR.
 
 Tries to deduce the MR the user intends
@@ -514,10 +514,10 @@ might be returned."
   ;; TODO: if can't deduce branch -> ask for full mr ref
   ;; TODO: if can't deduce project -> ask for full mr ref
   ;; TODO: if can't deduce mr -> ask for full mr ref
-  (let* ((branch (mg--read-branch))
-         (project-id (mg--infer-project-id branch))
+  (let* ((branch (magit-gitlab--read-branch))
+         (project-id (magit-gitlab--infer-project-id branch))
          (mr
-          (mg--get-mr-of-source-branch
+          (magit-gitlab--get-mr-of-source-branch
            project-id
            branch
            :no-cache (not cache))))
@@ -527,44 +527,44 @@ might be returned."
          branch
          project-id))))
 
-(defun mg--read-mr-scope ()
+(defun magit-gitlab--read-mr-scope ()
   "Get an MR from the scope if present, else call `magit-gitlab--read-mr'."
   (or (when transient-current-prefix
         (oref transient-current-prefix scope))
-      (mg--read-mr)))
+      (magit-gitlab--read-mr)))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-edit-description "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-edit-description
+ magit-gitlab-mr-edit-description
  (mr)
  "Edit the description of MR."
- (interactive (list (mg--read-mr-scope)))
- (mg--mr-create-description-buffer mr))
+ (interactive (list (magit-gitlab--read-mr-scope)))
+ (magit-gitlab--mr-create-description-buffer mr))
 
 (transient-define-suffix
- mg-mr-edit-title (mr new-title) "Set the title of MR to NEW-TITLE."
- (interactive (let* ((mr (mg--read-mr-scope))
+ magit-gitlab-mr-edit-title (mr new-title) "Set the title of MR to NEW-TITLE."
+ (interactive (let* ((mr (magit-gitlab--read-mr-scope))
                      (new-title
-                      (read-string (mg--format mr "New title: ")
+                      (read-string (magit-gitlab--format mr "New title: ")
                                    (alist-get 'title mr))))
                 (list mr new-title)))
- (mg--mr-set-prop-async mr 'title new-title))
+ (magit-gitlab--mr-set-prop-async mr 'title new-title))
 
 (transient-define-suffix
- mg-mr-edit-labels
+ magit-gitlab-mr-edit-labels
  (mr new-labels)
  "Set the labels of MR to NEW-LABELS."
- (interactive (let* ((mr (mg--read-mr-scope))
+ (interactive (let* ((mr (magit-gitlab--read-mr-scope))
                      (new-labels
-                      (read-string (mg--format mr "New labels: ")
+                      (read-string (magit-gitlab--format mr "New labels: ")
                                    (string-join (alist-get 'labels mr)
                                                 ", "))))
                 (list mr new-labels)))
- (mg--mr-set-prop-async mr 'labels new-labels))
+ (magit-gitlab--mr-set-prop-async mr 'labels new-labels))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-edit-milestone "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-edit-milestone (mr new-milestone-iid)
+ magit-gitlab-mr-edit-milestone (mr new-milestone-iid)
  "Set the milestone of MR to NEW-MILESTONE-IID.
 
 If NEW-MILESTONE-IID is 0, then the milestone is removed.
@@ -573,14 +573,14 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
  ;; TODO: provide candidates
  ;; TODO: more tests
  ;; TODO: better progress messages when removing milestone
- (interactive (let* ((mr (mg--read-mr-scope))
+ (interactive (let* ((mr (magit-gitlab--read-mr-scope))
                      (old-milestone
                       (alist-get 'iid (alist-get 'milestone mr)))
                      (new-milestone-iid
                       (string-to-number
                        (string-remove-prefix
                         "%"
-                        (read-string (mg--format
+                        (read-string (magit-gitlab--format
                                       mr "New milestone id: ")
                                      (when old-milestone
                                        (number-to-string
@@ -591,30 +591,30 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
         (if (> new-milestone-iid 0)
             (alist-get
              'id
-             (mg--get-milestone-of-iid
+             (magit-gitlab--get-milestone-of-iid
               (alist-get 'project_id mr) new-milestone-iid))
           new-milestone-iid)))
    (message "new-milestone-iid: %s, new-milestone-id: %s"
             new-milestone-iid
             new-milestone-id)
-   (mg--mr-set-prop-async mr 'milestone_id new-milestone-id)))
+   (magit-gitlab--mr-set-prop-async mr 'milestone_id new-milestone-id)))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-edit-target-branch "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-edit-target-branch
+ magit-gitlab-mr-edit-target-branch
  (mr target-branch)
  "Set the target branch of the MR associated to BRANCH to TARGET-BRANCH"
  (interactive (list
-               (mg--read-mr-scope)
+               (magit-gitlab--read-mr-scope)
                (magit-read-other-branch "New target branch")))
- (mg--mr-set-prop-async mr 'target_branch target-branch))
+ (magit-gitlab--mr-set-prop-async mr 'target_branch target-branch))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-toggle-draft "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-toggle-draft
+ magit-gitlab-mr-toggle-draft
  (mr)
  "Toggle the draft status of the MR associate to BRANCH"
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let* ((title (alist-get 'title mr))
         (is-draft (string-match "^\\(Draft: \\)+\\(.*\\)$" title))
         (new-title
@@ -622,71 +622,71 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
              (let ((title-no-draft (match-string 2 title)))
                title-no-draft)
            (concat "Draft: " title))))
-   (mg--mr-set-prop-async
+   (magit-gitlab--mr-set-prop-async
     mr 'title new-title
     :message-progress
-    (mg--format mr "%s as draft"
+    (magit-gitlab--format mr "%s as draft"
                 (if is-draft
                     "Unmarking"
                   "Marking")))))
 
-(defun mg--decode-assignees (assignee-objs)
+(defun magit-gitlab--decode-assignees (assignee-objs)
   "From ASSIGNEE-OBJS to list of usernames (strings)."
   (mapcar
    (lambda (assignee-obj) (alist-get 'username assignee-obj))
    assignee-objs))
 
-(defun mg--to-user-id (id-or-username)
+(defun magit-gitlab--to-user-id (id-or-username)
   "From ID-OR-USERNAME to numerical user ids."
   (if (numberp id-or-username)
       id-or-username
     (if-let* ((assignee-username
                (string-remove-prefix "@" id-or-username)))
-      (alist-get 'id (mg--get-user assignee-username))
+      (alist-get 'id (magit-gitlab--get-user assignee-username))
       (error
        "Could not find id associated to username '%s' -- do they exist?"
        assignee-username))))
 
-(defun mg--format-user-as-candidate (user)
+(defun magit-gitlab--format-user-as-candidate (user)
   "Return USER as a cons (NAME (@USERNAME) . ID)."
   (let ((username (alist-get 'username user))
         (name (alist-get 'name user))
         (id (alist-get 'id user)))
     (cons (format "%s (@%s)" name username) id)))
 
-(defun mg--format-favorites-as-candidates ()
+(defun magit-gitlab--format-favorites-as-candidates ()
   (mapcar
    (lambda (user)
      (let* ((name (car (cdr user)))
             (username (car (cdr (cdr user))))
-            (id (mg--to-user-id username)))
+            (id (magit-gitlab--to-user-id username)))
        (cons (format "%s (%s)" name username) id)))
-   mg-favorite-users))
+   magit-gitlab-favorite-users))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-edit-assignees "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-edit-assignees
+ magit-gitlab-mr-edit-assignees
  (mr)
  "Edit the assignees of MR."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let*
      ((current-reviewers
        (mapcar
-        #'mg--format-user-as-candidate (alist-get 'reviewers mr)))
+        #'magit-gitlab--format-user-as-candidate (alist-get 'reviewers mr)))
       (current-assignees
        (mapcar
-        #'mg--format-user-as-candidate (alist-get 'assignees mr)))
+        #'magit-gitlab--format-user-as-candidate (alist-get 'assignees mr)))
       (candidate-assignees
        (append
         current-reviewers
         current-assignees
-        (list (mg--format-user-as-candidate (alist-get 'author mr)))
-        (mg--format-favorites-as-candidates)))
+        (list (magit-gitlab--format-user-as-candidate (alist-get 'author mr)))
+        (magit-gitlab--format-favorites-as-candidates)))
       (new-assignees
        (seq-uniq
         (completing-read-multiple
          ;; prompt
-         (mg--format
+         (magit-gitlab--format
           mr
           "Set assignees (space-separated GitLab usernames) [reviewers: %s]: "
           (if current-reviewers
@@ -709,8 +709,8 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
         (lambda (selection)
           (or (cdr (assoc selection candidate-assignees)) selection))
         new-assignees)))
-   (mg--mr-set-prop-async
-    mr 'assignee_ids (mapcar #'mg--to-user-id new-assignees-aux)
+   (magit-gitlab--mr-set-prop-async
+    mr 'assignee_ids (mapcar #'magit-gitlab--to-user-id new-assignees-aux)
     :show-value
     (lambda (_)
       (if new-assignees
@@ -719,33 +719,33 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
 
 ;; TODO: this doesn't make sense as an interactive function -- what to do?
 (transient-define-suffix
- mg-mr-assign-to-favorite-set
+ magit-gitlab-mr-assign-to-favorite-set
  (mr)
  "Assign MR to favorite users."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (if-let (assignees
-          (transient-args 'mg-mr-assign-to-favorite))
+          (transient-args 'magit-gitlab-mr-assign-to-favorite))
    ;; (print assignees)
-   (mg--mr-set-prop-async
+   (magit-gitlab--mr-set-prop-async
     mr
     'assignee_ids
-    (mapcar #'mg--to-user-id assignees)
+    (mapcar #'magit-gitlab--to-user-id assignees)
     :show-value (lambda (_) (string-join assignees ", ")))
    (error "Select a non-empty set of favorites first")))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-assign-to-reviewers "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-assign-to-reviewers
+ magit-gitlab-mr-assign-to-reviewers
  (mr)
  "Let the assignees of MR equals the current set of reviewers."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let* ((reviewers
          (if-let (reviewers
                   (alist-get 'reviewers mr))
            (mapcar
-            #'mg--format-user-as-candidate (alist-get 'reviewers mr))
+            #'magit-gitlab--format-user-as-candidate (alist-get 'reviewers mr))
            (error "This MR has no reviewers!"))))
-   (mg--mr-set-prop-async
+   (magit-gitlab--mr-set-prop-async
     mr
     'assignee_ids
     (mapcar #'cdr reviewers)
@@ -754,13 +754,13 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
 
 ;;;###autoload (autoload 'magit-gitlab-mr-assign-to-me "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-assign-to-me
+ magit-gitlab-mr-assign-to-me
  (mr)
  "Assign the MR to the current user (you)."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let* ((my-username (concat "@" (ghub--username nil 'gitlab)))
-        (my-id (mg--to-user-id my-username)))
-   (mg--mr-set-prop-async
+        (my-id (magit-gitlab--to-user-id my-username)))
+   (magit-gitlab--mr-set-prop-async
     mr
     'assignee_ids
     (list my-id)
@@ -768,14 +768,14 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
 
 ;;;###autoload (autoload 'magit-gitlab-mr-assign-to-author "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-assign-to-author
+ magit-gitlab-mr-assign-to-author
  (mr)
  "Assign the MR to its author."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let* ((author-username
          (concat "@" (alist-get 'username (alist-get 'author mr))))
         (author-id (alist-get 'id (alist-get 'author mr))))
-   (mg--mr-set-prop-async
+   (magit-gitlab--mr-set-prop-async
     mr
     'assignee_ids
     (list author-id)
@@ -784,28 +784,28 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
 
 ;;;###autoload (autoload 'magit-gitlab-mr-edit-reviewers "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-edit-reviewers
+ magit-gitlab-mr-edit-reviewers
  (mr)
  "Edit the set of reviewers of MR."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let*
      ((current-reviewers
        (mapcar
-        #'mg--format-user-as-candidate (alist-get 'reviewers mr)))
+        #'magit-gitlab--format-user-as-candidate (alist-get 'reviewers mr)))
       (current-assignees
        (mapcar
-        #'mg--format-user-as-candidate (alist-get 'assignees mr)))
+        #'magit-gitlab--format-user-as-candidate (alist-get 'assignees mr)))
       (candidate-reviewers
        (append
         current-reviewers
         current-assignees
-        (list (mg--format-user-as-candidate (alist-get 'author mr)))
-        (mg--format-favorites-as-candidates)))
+        (list (magit-gitlab--format-user-as-candidate (alist-get 'author mr)))
+        (magit-gitlab--format-favorites-as-candidates)))
       (new-reviewers
        (seq-uniq
         (completing-read-multiple
          ;; prompt
-         (mg--format
+         (magit-gitlab--format
           mr
           "Set reviewers (space-separated GitLab usernames) [assignees: %s]: "
           (if current-assignees
@@ -828,8 +828,8 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
         (lambda (selection)
           (or (cdr (assoc selection candidate-reviewers)) selection))
         new-reviewers)))
-   (mg--mr-set-prop-async
-    mr 'reviewer_ids (mapcar #'mg--to-user-id new-reviewers-aux)
+   (magit-gitlab--mr-set-prop-async
+    mr 'reviewer_ids (mapcar #'magit-gitlab--to-user-id new-reviewers-aux)
     :show-value
     (lambda (_)
       (if new-reviewers
@@ -838,17 +838,17 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
 
 ;;;###autoload (autoload 'magit-gitlab-mr-review-by-assignees "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-review-by-assignees
+ magit-gitlab-mr-review-by-assignees
  (mr)
  "Let the reviewers of MR equals the current set of assignees."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let* ((assignees
          (if-let (assignees
                   (alist-get 'assignees mr))
            (mapcar
-            #'mg--format-user-as-candidate (alist-get 'assignees mr))
+            #'magit-gitlab--format-user-as-candidate (alist-get 'assignees mr))
            (error "This MR has no reviewers!"))))
-   (mg--mr-set-prop-async
+   (magit-gitlab--mr-set-prop-async
     mr
     'reviewer_ids
     (mapcar #'cdr assignees)
@@ -857,56 +857,56 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
 
 ;;;###autoload (autoload 'magit-gitlab-mr-browse "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-browse
+ magit-gitlab-mr-browse
  (mr)
  "Browse the MR of the current BRANCH on GitLab with ‘browse-url’."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (browse-url (alist-get 'web_url mr)))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-browse-kill "magit-gitlab" nil t)
 (transient-define-suffix
- mg-mr-browse-kill (mr)
+ magit-gitlab-mr-browse-kill (mr)
  "Add the URL of the current MR to the kill ring.
 
-Works like ‘mg-mr-browse’, but puts the address in the
+Works like ‘magit-gitlab-mr-browse’, but puts the address in the
 kill ring instead of opening it with ‘browse-url’."
- (interactive (list (mg--read-mr-scope)))
+ (interactive (list (magit-gitlab--read-mr-scope)))
  (let* ((web-url (alist-get 'web_url mr)))
    (kill-new web-url)
    (message "Added URL `%s' to kill ring" web-url)))
 
-(defun mg--mr-assign-to-favorite--setup-children (_)
+(defun magit-gitlab--mr-assign-to-favorite--setup-children (_)
   (transient-parse-suffixes
-   'mg-mr-assign-to-favorite mg-favorite-users))
+   'magit-gitlab-mr-assign-to-favorite magit-gitlab-favorite-users))
 
 ;;;###autoload (autoload 'magit-gitlab-customize-favorites "magit-gitlab" nil t)
-(defun mg-customize-favorites ()
+(defun magit-gitlab-customize-favorites ()
   "Customize favorite GitLab users."
   (interactive)
-  (customize-variable 'mg-favorite-users))
+  (customize-variable 'magit-gitlab-favorite-users))
 
 ;;;###autoload (autoload 'magit-gitlab-mr-assign-to-favorite "magit-gitlab" nil t)
 (transient-define-prefix
- mg-mr-assign-to-favorite (mr) "Assign MR to a favorite user."
+ magit-gitlab-mr-assign-to-favorite (mr) "Assign MR to a favorite user."
  [["Favorites"
-   :if (lambda () mg-favorite-users)
-   :setup-children mg--mr-assign-to-favorite--setup-children
+   :if (lambda () magit-gitlab-favorite-users)
+   :setup-children magit-gitlab--mr-assign-to-favorite--setup-children
    :class transient-column]
   ["Handle favorites" ("C"
     "customize favorites"
-    mg-customize-favorites)]]
+    magit-gitlab-customize-favorites)]]
  ["Actions"
   :if
-  (lambda () mg-favorite-users)
-  ("S" "set" mg-mr-assign-to-favorite-set)]
+  (lambda () magit-gitlab-favorite-users)
+  ("S" "set" magit-gitlab-mr-assign-to-favorite-set)]
  (interactive (list
-               (mg--read-mr
-                :cache (eq transient-current-command 'mg-mr))))
- (transient-setup 'mg-mr-assign-to-favorite nil nil :scope mr))
+               (magit-gitlab--read-mr
+                :cache (eq transient-current-command 'magit-gitlab-mr))))
+ (transient-setup 'magit-gitlab-mr-assign-to-favorite nil nil :scope mr))
 
 ;;;###autoload (autoload 'magit-gitlab-mr "magit-gitlab" nil t)
 (transient-define-prefix
- mg-mr
+ magit-gitlab-mr
  (mr)
  "Act on a GitLab merge request."
  [:description
@@ -917,7 +917,7 @@ kill ring instead of opening it with ‘browse-url’."
               (propertize "Act on GitLab merge request "
                           'face
                           'transient-heading)
-              (propertize (mg--show-mr mr) 'face 'magit-branch-local)
+              (propertize (magit-gitlab--show-mr mr) 'face 'magit-branch-local)
               ": "
               (format "%s " (alist-get 'title mr))
               (format "[target: %s]"
@@ -937,13 +937,13 @@ kill ring instead of opening it with ‘browse-url’."
         (concat
          (string-join (list title labels milestone) "\n") "\n"))))
   ["Edit"
-   ("t" "title" mg-mr-edit-title)
-   ("d" "description" mg-mr-edit-description)
-   ("m" "milestone" mg-mr-edit-milestone)
+   ("t" "title" magit-gitlab-mr-edit-title)
+   ("d" "description" magit-gitlab-mr-edit-description)
+   ("m" "milestone" magit-gitlab-mr-edit-milestone)
    ;; TODO: since we know the MR we make this either "Draft" or "Undraft"
-   ("D" "toggle draft status" mg-mr-toggle-draft)
-   ("l" "labels" mg-mr-edit-labels)
-   ("T" "target branch" mg-mr-edit-target-branch)]
+   ("D" "toggle draft status" magit-gitlab-mr-toggle-draft)
+   ("l" "labels" magit-gitlab-mr-edit-labels)
+   ("T" "target branch" magit-gitlab-mr-edit-target-branch)]
   [:description
    (lambda ()
      (let ((mr (oref (transient-prefix-object) scope)))
@@ -954,11 +954,11 @@ kill ring instead of opening it with ‘browse-url’."
                                 "@" (alist-get 'username user)))
                              (alist-get 'assignees mr))
                             ", "))))
-   ("a a" "edit assignees" mg-mr-edit-assignees)
-   ("a m" "assign to me" mg-mr-assign-to-me)
-   ("a A" "assign to author" mg-mr-assign-to-author)
-   ("a r" "assign to reviewers" mg-mr-assign-to-reviewers)
-   ("a f" "assign to favorite" mg-mr-assign-to-favorite)]
+   ("a a" "edit assignees" magit-gitlab-mr-edit-assignees)
+   ("a m" "assign to me" magit-gitlab-mr-assign-to-me)
+   ("a A" "assign to author" magit-gitlab-mr-assign-to-author)
+   ("a r" "assign to reviewers" magit-gitlab-mr-assign-to-reviewers)
+   ("a f" "assign to favorite" magit-gitlab-mr-assign-to-favorite)]
   [:description
    (lambda ()
      (let ((mr (oref (transient-prefix-object) scope)))
@@ -969,19 +969,15 @@ kill ring instead of opening it with ‘browse-url’."
                                 "@" (alist-get 'username user)))
                              (alist-get 'reviewers mr))
                             ", "))))
-   ("r r" "edit reviewers" mg-mr-edit-reviewers)
-   ("r a" "copy assignees to reviewers" mg-mr-review-by-assignees)]
+   ("r r" "edit reviewers" magit-gitlab-mr-edit-reviewers)
+   ("r a" "copy assignees to reviewers" magit-gitlab-mr-review-by-assignees)]
 
   ["Actions"
-   ("v" "open MR on GitLab" mg-mr-browse)
-   ("k" "add MR url to kill ring" mg-mr-browse-kill)]]
- (interactive (list (mg--read-mr)))
- (transient-setup 'mg-mr nil nil :scope mr))
+   ("v" "open MR on GitLab" magit-gitlab-mr-browse)
+   ("k" "add MR url to kill ring" magit-gitlab-mr-browse-kill)]]
+ (interactive (list (magit-gitlab--read-mr)))
+ (transient-setup 'magit-gitlab-mr nil nil :scope mr))
 
 (provide 'magit-gitlab)
-
-;; Local Variables:
-;; read-symbol-shorthands: (("mg-" . "magit-gitlab-"))
-;; End:
 
 ;;; magit-gitlab.el ends here
