@@ -119,9 +119,6 @@ For more information, see URL
 `https://docs.gitlab.com/ee/api/projects.html#get-single-project'."
   (concat "/projects/" (magit-gitlab-url-encode-project-id project-id)))
 
-(defvar magit-gitlab--GET-cache-file "/tmp/.magit-glab-cache.el"
-  "Path to magit-gitlab's cache.")
-
 (defvar magit-gitlab--GET-cache (make-hash-table :test 'equal)
   "Hash table for storing memoized GET results.")
 
