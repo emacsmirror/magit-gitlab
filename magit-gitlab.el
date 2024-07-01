@@ -722,7 +722,6 @@ NEW-MILESTONE-IID is assumed to be in the same project as MR."
  (interactive (list (magit-gitlab--read-mr-scope)))
  (if-let (assignees
           (transient-args 'magit-gitlab-mr-assign-to-favorite))
-   ;; (print assignees)
    (magit-gitlab--mr-set-prop-async
     mr
     'assignee_ids
