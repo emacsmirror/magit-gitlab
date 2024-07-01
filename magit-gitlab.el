@@ -74,7 +74,7 @@ Example:
 
 ;;; Constants
 
-(defconst magit-gitlab-version "0.1.0" "Version of `magit-gitlab'.")
+(defconst magit-gitlab-version "0.1.0+dev" "Version of `magit-gitlab'.")
 
 ;;; Caches
 
