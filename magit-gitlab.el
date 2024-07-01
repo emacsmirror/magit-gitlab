@@ -72,6 +72,10 @@ Example:
 
 ;; Internals
 
+;;; Constants
+
+(defconst magit-gitlab-version "0.1.0" "Version of `magit-gitlab'.")
+
 ;;; Caches
 
 (defvar magit-gitlab--known-milestones (make-hash-table :test 'equal)
