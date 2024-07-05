@@ -112,27 +112,40 @@
 
 (ert-deftest mg--test-project-of-remote ()
   "Test magit-gitlab--project-of-remote."
-  ;; ssh
-  (should
-   (equal
-    "NAMESPACE/PROJECT"
-    (magit-gitlab--project-of-remote
-     "git@gitlab.com:NAMESPACE/PROJECT.git")))
-  ;; https
-  (should
-   (equal
-    "NAMESPACE/PROJECT"
-    (magit-gitlab--project-of-remote
-     "https://gitlab.com/NAMESPACE/PROJECT.git")))
-  ;; nested projects
-  (should
-   (equal
-    "NAMESPACE/DIR/PROJECT"
-    (magit-gitlab--project-of-remote
-     "https://gitlab.com/NAMESPACE/DIR/PROJECT.git")))
-  ;; not a gitlab recognized remote
-  (should-error
-   (magit-gitlab--project-of-remote "https://google.com")))
+  (let ((magit-gitlab-remote-regexps (custom--standard-value 'magit-gitlab-remote-regexps)))
+    ;; ssh
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "git@gitlab.com:NAMESPACE/PROJECT.git")))
+    ;; https
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://gitlab.com/NAMESPACE/PROJECT.git")))
+    ;; not a gitlab recognized remote
+    (should-error
+     (magit-gitlab--project-of-remote "https://google.com"))
+    ;; custom domains
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://example.gitlab.com/NAMESPACE/PROJECT.git")))
+    ;; custom tld
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://example.gitlab.io/NAMESPACE/PROJECT.git")))
+    ;; nested projects
+    (should
+     (equal
+      "NAMESPACE/DIR/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://example.gitlab.com/NAMESPACE/DIR/PROJECT.git")))))
 
 (ert-deftest mg--test-strip-remote-prefix ()
   (should
