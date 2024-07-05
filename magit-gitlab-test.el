@@ -110,6 +110,30 @@
   (let ((magit-gitlab-GET-cache (make-hash-table :test 'equal)))
     (should (equal 4414596 (magit-gitlab--to-user-id "@arvidnl")))))
 
+(ert-deftest mg--test-project-of-remote ()
+  "Test magit-gitlab--project-of-remote."
+  ;; ssh
+  (should
+   (equal
+    "NAMESPACE/PROJECT"
+    (magit-gitlab--project-of-remote
+     "git@gitlab.com:NAMESPACE/PROJECT.git")))
+  ;; https
+  (should
+   (equal
+    "NAMESPACE/PROJECT"
+    (magit-gitlab--project-of-remote
+     "https://gitlab.com/NAMESPACE/PROJECT.git")))
+  ;; nested projects
+  (should
+   (equal
+    "NAMESPACE/DIR/PROJECT"
+    (magit-gitlab--project-of-remote
+     "https://gitlab.com/NAMESPACE/DIR/PROJECT.git")))
+  ;; not a gitlab recognized remote
+  (should-error
+   (magit-gitlab--project-of-remote "https://google.com")))
+
 ;; Local Variables:
 ;; read-symbol-shorthands: (("mg-" . "magit-gitlab-"))
 ;; End:
