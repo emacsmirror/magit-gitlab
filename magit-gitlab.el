@@ -378,29 +378,44 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
          (lambda (err _header _status _req)
            (message "%s: %s" message-error err))))))
 
-(defcustom magit-gitlab-remote-regexp
-  "\\(git@gitlab\\.com:\\|https?://gitlab\\.com/\\)\\(.+\\)/\\([^/.]+\\)\\.git"
-  "Default regexp used to determine the NAMESPACE and PROJECT from the remote-url"
+(defcustom magit-gitlab-remote-regexps
+  '("git@.*gitlab.*\\.[^:]+:\\(.+\\)/\\([^/.]+\\)\\.git"
+    "https?://.*gitlab.*\\.[^/]+/\\(.+\\)/\\([^/.]+\\)\\.git")
+  "A list of regexps matching GitLab instances.
+
+Should be a list of regexps, where each value is a regexp
+matching the remote of a GitLab hosted project.  For instance, to
+work with GitLab.com-hosted instances, this regexp should match
+remotes like:
+
+  git@gitlab.com:arvidnl/magit-gitlab.git
+
+or
+
+  https://gitlab.com/arvidnl/magit-gitlab.git
+
+Furthermore, regexps should contain exactly two capture groups:
+the first matching on project namespace (`arvidnl' in the
+examples above), the second matching the project
+name (`magit-gitlab' in the example above)."
   :group 'magit-gitlab
-  :type 'string)
+  :type '(repeat regexp))
 
 (defun magit-gitlab--project-of-remote (remote-url)
   "Extract NAMESPACE/PROJECT from GitLab REMOTE-URL.
 
-URL is a git repository URL in either of these forms:
-- git@gitlab.com:NAMESPACE/PROJECT.git
-- https://gitlab.com/NAMESPACE/PROJECT.git
-- https://gitlab.example.com/NAMESPACE/PROJECT.git
-- Supports subfolders in NAMESPACE, e.g., NAMESPACE/SUBNAMESPACE/PROJECT.git
+URL should be a git repository URL that matches at least one of
+the regular expressions in `magit-gitlab-remote-regexps'.
 
-Returns the 'NAMESPACE/PROJECT' part of the URL."
-  (if (string-match
-       magit-gitlab-remote-regexp
-       remote-url)
-      (format "%s/%s" (match-string 2 remote-url) (match-string 3 remote-url))
-    (error
-     "Remote URL '%s' does not match expected format for a GitLab remote"
-     remote-url)))
+Returns the 'NAMESPACE/PROJECT' part of the URL.
+Throws an error if REMOTE-URL matches none of the regexps in
+magit-gitlab-remote-regexps."
+  (catch 'match
+    (dolist (project-re magit-gitlab-remote-regexps)
+      (when (string-match project-re remote-url)
+        (throw 'match
+               (format "%s/%s" (match-string 1 remote-url) (match-string 2 remote-url)))))
+    (error "Remote URL '%s' does not match expected format for a GitLab remote" remote-url)))
 
 (defun magit-gitlab--infer-project-id (branch)
   (if-let (remote
