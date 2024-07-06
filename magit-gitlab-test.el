@@ -134,6 +134,20 @@
   (should-error
    (magit-gitlab--project-of-remote "https://google.com")))
 
+(ert-deftest mg--test-strip-remote-prefix ()
+  (should
+   (equal
+    "bar"
+    (magit-gitlab--strip-remote-prefix "foo/bar")))
+  (should
+   (equal
+    "bar/baz"
+    (magit-gitlab--strip-remote-prefix "foo/bar/baz")))
+  (should
+   (equal
+    "baz"
+    (magit-gitlab--strip-remote-prefix "baz"))))
+
 ;; Local Variables:
 ;; read-symbol-shorthands: (("mg-" . "magit-gitlab-"))
 ;; End:

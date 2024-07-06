@@ -493,14 +493,19 @@ Calls CALLBACK if successful, ERRORBACK if not."
         (mapconcat #'identity (cdr components) "/") ; Rejoin the rest if more than one slash exists
       branch-name))) ; Return the original if no slash found
 
-;; By default, get current branch or branch-at-point. If prefix is
-;; given or if both those values are nil, then read a value instead.
 (defun magit-gitlab--read-branch ()
+  "Get current branch or branch-at-point.
+
+If prefix is given or if both those values are nil, then read a
+value instead. If branch-at-point is a remote branch, then the
+remote prefix is stripped."
   (let ((branch
          (or (magit-branch-at-point) (magit-get-current-branch))))
     (if (or current-prefix-arg (not branch))
         (read-string "Branch name: ")
-      (magit-gitlab--strip-remote-prefix branch))))
+      (if (magit-remote-branch-p branch)
+        (magit-gitlab--strip-remote-prefix branch)
+        branch))))
 
 (cl-defun magit-gitlab--read-mr (&key cache)
   "Read an MR.
