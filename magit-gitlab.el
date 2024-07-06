@@ -378,20 +378,26 @@ See `magit-gitlab--get' for details on NO-CACHE, CALLBACK and ERRORBACK."
          (lambda (err _header _status _req)
            (message "%s: %s" message-error err))))))
 
+(defcustom magit-gitlab-remote-regexp
+  "\\(git@gitlab\\.com:\\|https?://gitlab\\.com/\\)\\(.+\\)/\\([^/.]+\\)\\.git"
+  "Default regexp used to determine the NAMESPACE and PROJECT from the remote-url"
+  :group 'magit-gitlab
+  :type 'string)
+
 (defun magit-gitlab--project-of-remote (remote-url)
   "Extract NAMESPACE/PROJECT from GitLab REMOTE-URL.
 
 URL is a git repository URL in either of these forms:
 - git@gitlab.com:NAMESPACE/PROJECT.git
 - https://gitlab.com/NAMESPACE/PROJECT.git
+- https://gitlab.example.com/NAMESPACE/PROJECT.git
+- Supports subfolders in NAMESPACE, e.g., NAMESPACE/SUBNAMESPACE/PROJECT.git
 
 Returns the 'NAMESPACE/PROJECT' part of the URL."
-  ;; git@gitlab.com:tezos/tezos.git
-  ;; https://gitlab.com/tezos/tezos.git
   (if (string-match
-       "\\(git@gitlab\.com:\\|https://gitlab\.com/\\)\\([^/]+/[^/.]+\\)\\.git"
+       magit-gitlab-remote-regexp
        remote-url)
-      (match-string 2 remote-url)
+      (format "%s/%s" (match-string 2 remote-url) (match-string 3 remote-url))
     (error
      "Remote URL '%s' does not match expected format for a GitLab remote"
      remote-url)))
