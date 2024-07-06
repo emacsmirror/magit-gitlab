@@ -8,6 +8,7 @@
 
  - Support nested GitLab projects, e.g. http://gitlab.com/FOO/BAR/BAZ.git.
    Contribution from @sebastiaanspeck.
+ - Handle branch names containing slashes, i.e. `my/branch`.
 
 ## Version 0.1.0
 
