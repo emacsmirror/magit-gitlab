@@ -18,7 +18,7 @@
 
 (ert-deftest mg--test-get-sync ()
   "Test synchronous version of mg--get."
-  (let ((magit-gitlab-GET-cache (make-hash-table :test 'equal)))
+  (let ((magit-gitlab--GET-cache (make-hash-table :test 'equal)))
     (with-mock
      (stub ghub-request => "18.0")
      (should (equal "18.0" (magit-gitlab--get "/version" nil))))
@@ -32,7 +32,7 @@
 
 (ert-deftest mg--test-get-async ()
   "Test asynchronous version of mg--get."
-  (let* ((magit-gitlab-GET-cache (make-hash-table :test 'equal))
+  (let* ((magit-gitlab--GET-cache (make-hash-table :test 'equal))
          (ghub-request-original (symbol-function 'ghub-request))
          (ghub-request-mock-response nil)
          (ghub-request-mock
@@ -107,32 +107,45 @@
 
 
 (ert-deftest mg--test-to-user-id ()
-  (let ((magit-gitlab-GET-cache (make-hash-table :test 'equal)))
+  (let ((magit-gitlab--GET-cache (make-hash-table :test 'equal)))
     (should (equal 4414596 (magit-gitlab--to-user-id "@arvidnl")))))
 
 (ert-deftest mg--test-project-of-remote ()
   "Test magit-gitlab--project-of-remote."
-  ;; ssh
-  (should
-   (equal
-    "NAMESPACE/PROJECT"
-    (magit-gitlab--project-of-remote
-     "git@gitlab.com:NAMESPACE/PROJECT.git")))
-  ;; https
-  (should
-   (equal
-    "NAMESPACE/PROJECT"
-    (magit-gitlab--project-of-remote
-     "https://gitlab.com/NAMESPACE/PROJECT.git")))
-  ;; nested projects
-  (should
-   (equal
-    "NAMESPACE/DIR/PROJECT"
-    (magit-gitlab--project-of-remote
-     "https://gitlab.com/NAMESPACE/DIR/PROJECT.git")))
-  ;; not a gitlab recognized remote
-  (should-error
-   (magit-gitlab--project-of-remote "https://google.com")))
+  (let ((magit-gitlab-remote-regexps (custom--standard-value 'magit-gitlab-remote-regexps)))
+    ;; ssh
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "git@gitlab.com:NAMESPACE/PROJECT.git")))
+    ;; https
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://gitlab.com/NAMESPACE/PROJECT.git")))
+    ;; not a gitlab recognized remote
+    (should-error
+     (magit-gitlab--project-of-remote "https://google.com"))
+    ;; custom domains
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://example.gitlab.com/NAMESPACE/PROJECT.git")))
+    ;; custom tld
+    (should
+     (equal
+      "NAMESPACE/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://example.gitlab.io/NAMESPACE/PROJECT.git")))
+    ;; nested projects
+    (should
+     (equal
+      "NAMESPACE/DIR/PROJECT"
+      (magit-gitlab--project-of-remote
+       "https://example.gitlab.com/NAMESPACE/DIR/PROJECT.git")))))
 
 (ert-deftest mg--test-strip-remote-prefix ()
   (should
