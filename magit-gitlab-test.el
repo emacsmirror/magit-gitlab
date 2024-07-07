@@ -18,7 +18,7 @@
 
 (ert-deftest mg--test-get-sync ()
   "Test synchronous version of mg--get."
-  (let ((magit-gitlab-GET-cache (make-hash-table :test 'equal)))
+  (let ((magit-gitlab--GET-cache (make-hash-table :test 'equal)))
     (with-mock
      (stub ghub-request => "18.0")
      (should (equal "18.0" (magit-gitlab--get "/version" nil))))
@@ -32,7 +32,7 @@
 
 (ert-deftest mg--test-get-async ()
   "Test asynchronous version of mg--get."
-  (let* ((magit-gitlab-GET-cache (make-hash-table :test 'equal))
+  (let* ((magit-gitlab--GET-cache (make-hash-table :test 'equal))
          (ghub-request-original (symbol-function 'ghub-request))
          (ghub-request-mock-response nil)
          (ghub-request-mock
@@ -107,7 +107,7 @@
 
 
 (ert-deftest mg--test-to-user-id ()
-  (let ((magit-gitlab-GET-cache (make-hash-table :test 'equal)))
+  (let ((magit-gitlab--GET-cache (make-hash-table :test 'equal)))
     (should (equal 4414596 (magit-gitlab--to-user-id "@arvidnl")))))
 
 (ert-deftest mg--test-project-of-remote ()
